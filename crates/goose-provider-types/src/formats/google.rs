@@ -1482,7 +1482,7 @@ mod tests {
         r#""parts": [{"text": " world"}]}}]}"#,
         "\n",
         r#"data: {"candidates": [{"content": {"role": "model", "#,
-        r#""parts": [{"text": "!"}]}}], "#,
+        r#""parts": [{"text": "!"}]}, "finishReason": "STOP"}], "#,
         r#""usageMetadata": {"promptTokenCount": 10, "#,
         r#""candidatesTokenCount": 3, "totalTokenCount": 13}}"#
     );
@@ -1490,7 +1490,7 @@ mod tests {
     const GOOGLE_FUNCTION_STREAM: &str = concat!(
         r#"data: {"candidates": [{"content": {"role": "model", "#,
         r#""parts": [{"functionCall": {"name": "test_tool", "#,
-        r#""args": {"param": "value"}}}]}}], "#,
+        r#""args": {"param": "value"}}}]}, "finishReason": "STOP"}], "#,
         r#""usageMetadata": {"promptTokenCount": 5, "#,
         r#""candidatesTokenCount": 2, "totalTokenCount": 7}}"#
     );

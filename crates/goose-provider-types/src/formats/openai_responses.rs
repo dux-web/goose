@@ -2997,6 +2997,21 @@ mod tests {
                     "delta": "cannot\u{E0042}help"
                 })
             ),
+            format!(
+                "data: {}",
+                serde_json::json!({
+                    "type": "response.completed",
+                    "sequence_number": 6,
+                    "response": {
+                        "id": "resp_1",
+                        "object": "response",
+                        "created_at": 0,
+                        "status": "completed",
+                        "model": "gpt-5.5",
+                        "output": []
+                    }
+                })
+            ),
             "data: [DONE]".to_string(),
         ];
         let response_stream = tokio_stream::iter(lines.into_iter().map(Ok));
