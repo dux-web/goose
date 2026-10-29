@@ -687,6 +687,16 @@ fn get_thinking_config(
             include_thoughts: true,
         });
     }
+    if let Some(thinking_budget) = model_config
+        .request_param::<i32>("thinking_budget")
+        .filter(|budget| *budget >= -1)
+    {
+        return Some(ThinkingConfig {
+            thinking_level: None,
+            thinking_budget: Some(thinking_budget),
+            include_thoughts: true,
+        });
+    }
     let model_name = model_config.model_name.to_lowercase();
     let is_gemini_3 = model_name.starts_with("gemini-3");
     let is_gemini_25 = model_name.starts_with("gemini-2.5");
@@ -1902,6 +1912,23 @@ data: [DONE]"#;
             );
             assert!(payload["generationConfig"]["thinkingConfig"]
                 .get("thinkingBudget")
+                .is_none());
+        }
+    }
+
+    #[test]
+    fn test_explicit_budget_without_catalog() {
+        for budget in [-1, 2048] {
+            let config = ModelConfig::new("custom-gemini").with_merged_request_params(
+                [("thinking_budget".to_string(), json!(budget))].into(),
+            );
+            let payload = create_request(&config, "", &[], &[]).unwrap();
+            assert_eq!(
+                payload["generationConfig"]["thinkingConfig"]["thinkingBudget"],
+                budget
+            );
+            assert!(payload["generationConfig"]["thinkingConfig"]
+                .get("thinkingLevel")
                 .is_none());
         }
     }
