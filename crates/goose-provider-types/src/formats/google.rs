@@ -620,7 +620,7 @@ struct GenerationConfig {
     thinking_config: Option<ThinkingConfig>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum ThinkingLevel {
     Minimal,
@@ -680,6 +680,13 @@ fn get_thinking_config(
         }
         return None;
     }
+    if let Some(thinking_level) = model_config.request_param::<ThinkingLevel>("thinking_level") {
+        return Some(ThinkingConfig {
+            thinking_level: Some(thinking_level),
+            thinking_budget: None,
+            include_thoughts: true,
+        });
+    }
     let model_name = model_config.model_name.to_lowercase();
     let is_gemini_3 = model_name.starts_with("gemini-3");
     let is_gemini_25 = model_name.starts_with("gemini-2.5");
@@ -711,10 +718,10 @@ fn get_thinking_config(
             .request_param::<i32>("thinking_budget")
             .or(thinking_budget)
         {
-            Some(budget) if budget >= 0 => budget,
+            Some(budget) if budget >= -1 => budget,
             Some(budget) => {
                 tracing::warn!(
-                    "Invalid thinking budget '{}' for model '{}'. Must be >= 0. Using '{}'.",
+                    "Invalid thinking budget '{}' for model '{}'. Must be >= -1. Using '{}'.",
                     budget,
                     model_config.model_name,
                     DEFAULT_THINKING_BUDGET,
@@ -1871,10 +1878,7 @@ data: [DONE]"#;
         let result = get_thinking_config(&config, None);
         assert!(result.is_some());
         let thinking_config = result.unwrap();
-        assert_eq!(
-            thinking_config.thinking_budget,
-            Some(DEFAULT_THINKING_BUDGET)
-        );
+        assert_eq!(thinking_config.thinking_budget, Some(-1));
 
         let config = ModelConfig::new("gemini-2.0-flash");
         let result = get_thinking_config(&config, None);
@@ -1883,6 +1887,23 @@ data: [DONE]"#;
         let config = ModelConfig::new("gpt-4o");
         let result = get_thinking_config(&config, None);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_explicit_thinking_levels() {
+        for level in ["minimal", "low", "medium", "high"] {
+            let config = ModelConfig::new("gemini-3-flash-preview")
+                .with_thinking_effort(ThinkingEffort::Low)
+                .with_merged_request_params([("thinking_level".to_string(), json!(level))].into());
+            let payload = create_request(&config, "", &[], &[]).unwrap();
+            assert_eq!(
+                payload["generationConfig"]["thinkingConfig"]["thinkingLevel"],
+                level
+            );
+            assert!(payload["generationConfig"]["thinkingConfig"]
+                .get("thinkingBudget")
+                .is_none());
+        }
     }
 
     #[test]
