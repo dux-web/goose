@@ -1289,12 +1289,14 @@ where
         let mut output_token_limit_reached = false;
         let mut output_token_limit_metadata_emitted = false;
         let mut usage_emitted = false;
+        let mut stream_completed = false;
 
         'outer: while let Some(response) = stream.next().await {
             let response_str = response?;
             let line = strip_data_prefix(&response_str);
 
             if line.is_some_and(|l| l == "[DONE]") {
+                stream_completed = true;
                 break 'outer;
             }
 
@@ -1368,6 +1370,7 @@ where
                             let response_str = response_chunk?;
                             if let Some(line) = strip_data_prefix(&response_str) {
                                 if line == "[DONE]" {
+                                    stream_completed = true;
                                     break 'outer;
                                 }
 
@@ -1642,6 +1645,10 @@ where
                 usage_emitted = true;
                 yield (None, usage)
             }
+        }
+
+        if !stream_completed && last_finish_reason.is_none() {
+            Err(ProviderError::NetworkError("OpenAI stream ended before completion".into()))?;
         }
 
         let filtered = think_filter.finish();

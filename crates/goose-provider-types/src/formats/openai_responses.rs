@@ -1284,6 +1284,10 @@ where
             }
         }
 
+        if final_usage.is_none() {
+            Err(ProviderError::NetworkError("Responses stream ended before completion".into()))?;
+        }
+
         // Process final output items and yield usage data
         let content = process_streaming_output_items(output_items, is_text_response)?;
 

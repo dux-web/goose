@@ -1054,6 +1054,7 @@ where
         let mut message_id: Option<String> = None;
         let mut thinking: Option<ThinkingState> = None;
         let mut stop_reason: Option<String> = None;
+        let mut stream_completed = false;
         let mut additional_data: Option<Map<String, Value>> = None;
 
         while let Some(line_result) = stream.next().await {
@@ -1069,6 +1070,7 @@ where
 
             // Handle end of stream
             if data_part.trim() == "[DONE]" {
+                stream_completed = true;
                 break;
             }
 
@@ -1293,6 +1295,7 @@ where
                     continue;
                 }
                 EVENT_MESSAGE_STOP => {
+                    stream_completed = true;
                     if let Some(usage_data) = event.data.get("usage") {
                         let usage = get_usage(usage_data).unwrap_or_default();
                         let model = event.data.get("model")
@@ -1310,6 +1313,10 @@ where
                     continue;
                 }
             }
+        }
+
+        if !stream_completed {
+            Err(ProviderError::NetworkError("Anthropic stream ended before completion".into()))?;
         }
 
         // A tool_use block left open at stream end never received its

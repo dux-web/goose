@@ -466,6 +466,7 @@ where
         let stream_id = Uuid::new_v4().to_string();
         let mut incomplete_data: Option<String> = None;
         let mut last_finish_reason: Option<String> = None;
+        let mut stream_completed = false;
         let mut last_response_id: Option<String> = None;
 
         while let Some(line_result) = stream.next().await {
@@ -486,6 +487,7 @@ where
             };
 
             if data_part.trim() == "[DONE]" {
+                stream_completed = true;
                 break;
             }
 
@@ -575,6 +577,10 @@ where
                     }
                 }
             }
+        }
+
+        if !stream_completed && last_finish_reason.is_none() {
+            Err(ProviderError::NetworkError("Google stream ended before completion".into()))?;
         }
 
         if let Some(mut usage) = final_usage {
